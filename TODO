@@ -1,0 +1,6 @@
+gcc example1.c -L /opt/FriendlyARM/mini2440/1_prj/freetype/freetype-2.4.10/tmp/lib/ -lfreetype -lm -I /opt/FriendlyARM/mini2440/1_prj/freetype/freetype-2.4.10/tmp/include/freetype2/
+
+说明:
+	此代码是用在PC上使用的，所以用GCC编译
+	freetype安装在PC的
+	/opt/FriendlyARM/mini2440/1_prj/freetype/freetype-2.4.10/tmp 目录下
