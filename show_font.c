@@ -8,6 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include <wchar.h>
+#include <stdlib.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -4779,10 +4780,12 @@ int main(int argc, char **argv)
 	int error;
     FT_Vector     pen;
 	FT_GlyphSlot  slot;
+	FT_Matrix	  matrix;				  /* transformation matrix */
+	double        angle;
 
-	if (argc != 2)
+	if (argc != 3)
 	{
-		printf("Usage : %s <font_file>\n", argv[0]);
+		printf("Usage : %s <font_file> <angle>\n", argv[0]);
 		return -1;
 	}
 		
@@ -4863,8 +4866,15 @@ int main(int argc, char **argv)
 	pen.x = (var.xres/2 + 8 + 16) * 64;
 	pen.y = (var.yres/2 - 16) * 64;
 
+	angle = ( 1.0 * strtoul(argv[2], NULL, 0) / 360 ) * 3.14159 * 2;	  /* use 25 degrees 	*/
+	/* set up matrix */
+	matrix.xx = (FT_Fixed)( cos( angle ) * 0x10000L );
+	matrix.xy = (FT_Fixed)(-sin( angle ) * 0x10000L );
+	matrix.yx = (FT_Fixed)( sin( angle ) * 0x10000L );
+	matrix.yy = (FT_Fixed)( cos( angle ) * 0x10000L );
+
     /* set transformation */
-    FT_Set_Transform( face, 0, &pen);
+    FT_Set_Transform( face, &matrix, &pen);
 
     /* load glyph image into the slot (erase previous one) */
     error = FT_Load_Char( face, chinese_str[0], FT_LOAD_RENDER );
