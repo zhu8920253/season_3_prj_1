@@ -33,6 +33,8 @@ void lcd_put_pixel(int x, int y, unsigned int color)
 
 	pen_16 = (unsigned short *)pen_8;
 	pen_32 = (unsigned int *)pen_8;
+	
+	color |= 0x555500;
 
 	switch (var.bits_per_pixel)
 	{
@@ -88,8 +90,7 @@ draw_bitmap( FT_Bitmap*  bitmap,
         continue;
 
       //image[j][i] |= bitmap->buffer[q * bitmap->width + p];
-      //lcd_put_pixel(i, j, bitmap->buffer[q * bitmap->width + p]);
-      lcd_put_pixel(i, j, bitmap->buffer[q * bitmap->width + p] | 0x555500);
+      lcd_put_pixel(i, j, bitmap->buffer[q * bitmap->width + p]);
     }
   }
 }
@@ -106,6 +107,11 @@ int main(int argc, char **argv)
     FT_Vector     pen;
 	FT_GlyphSlot  slot;
 	int i;
+	FT_BBox bbox;
+	FT_Glyph  glyph;
+
+	int line_box_ymin = 10000;
+	int line_box_ymax = 0;
 
 	if (argc != 2)
 	{
@@ -178,6 +184,19 @@ int main(int argc, char **argv)
 			printf("FT_Load_Char error\n");
 			return -1;
 		}
+
+		error = FT_Get_Glyph( face->glyph, &glyph );
+		if (error)
+		{
+			printf("FT_Get_Glyph error!\n");
+			return -1;
+		}
+		
+		FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_TRUNCATE, &bbox );
+		if (line_box_ymin > bbox.yMin)
+			line_box_ymin = bbox.yMin;
+		if (line_box_ymax < bbox.yMax)
+			line_box_ymax = bbox.yMax;
 		
 	    draw_bitmap( &slot->bitmap,
 	                 slot->bitmap_left,
@@ -188,6 +207,55 @@ int main(int argc, char **argv)
 		//pen.y += slot->advance.y;
 
 	}
+
+
+	/* 确定座标:
+	 * lcd_x = 0
+	 * lcd_y = line_box_ymax - line_box_ymin + 24
+	 * 笛卡尔座标系:
+	 * x = lcd_x = 0
+	 * y = var.yres - lcd_y = var.yres - (line_box_ymax - line_box_ymin + 24)
+	 */
+	pen.x = 0 * 64;
+	pen.y = (var.yres - (line_box_ymax - line_box_ymin + 24)) * 64;
+
+	for (i = 0; i < wcslen(wstr2); i++)
+	{
+	    /* set transformation */
+	    FT_Set_Transform( face, 0, &pen);
+
+	    /* load glyph image into the slot (erase previous one) */
+	    error = FT_Load_Char( face, wstr2[i], FT_LOAD_RENDER );
+		if (error)
+		{
+			printf("FT_Load_Char error\n");
+			return -1;
+		}
+
+		error = FT_Get_Glyph( face->glyph, &glyph );
+		if (error)
+		{
+			printf("FT_Get_Glyph error!\n");
+			return -1;
+		}
+		
+		FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_TRUNCATE, &bbox );
+		if (line_box_ymin > bbox.yMin)
+			line_box_ymin = bbox.yMin;
+		if (line_box_ymax < bbox.yMax)
+			line_box_ymax = bbox.yMax;
+		
+	    draw_bitmap( &slot->bitmap,
+	                 slot->bitmap_left,
+	                 var.yres - slot->bitmap_top);
+
+		/* increment pen position */
+		pen.x += slot->advance.x;
+		//pen.y += slot->advance.y;
+
+	}
+
+	
 	return 0;	
 }
 
