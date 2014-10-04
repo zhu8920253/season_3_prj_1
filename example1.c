@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <wchar.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -82,17 +83,30 @@ main( int     argc,
   int           target_height;
   int           n, num_chars;
 
-  int chinese_str[] = {0x97e6, 0x4e1c, 0x5c71, 0x0067};
+  //int chinese_str[] = {0x97e6, 0x4e1c, 0x5c71, 0x0067};
+  //char *str = "韦东山";
+//  wchar_t *chinese_str = L"韦东山g";
+  wchar_t *chinese_str = L"萨芬";
+  unsigned int *p = (unsigned int *)chinese_str;
+  int i;
 
-  if ( argc != 3 )
+	printf("Uniocde: \n");
+  for (i = 0; i < wcslen(chinese_str); i++)
   {
-    fprintf ( stderr, "usage: %s font sample-text\n", argv[0] );
+  	printf("0x%x ", p[i]);
+  }
+  printf("\n");
+  //return 0;
+
+  if ( argc != 2 )
+  {
+    fprintf ( stderr, "usage: %s font\n", argv[0] );
     exit( 1 );
   }
 
   filename      = argv[1];                           /* first argument     */
-  text          = argv[2];                           /* second argument    */
-  num_chars     = strlen( text );
+  //text          = argv[2];                           /* second argument    */
+  //num_chars     = strlen( text );
   angle         = ( 0.0 / 360 ) * 3.14159 * 2;      /* use 25 degrees     */
   target_height = HEIGHT;
 
@@ -126,7 +140,7 @@ main( int     argc,
   pen.x = 0 * 64;
   pen.y = ( target_height - 40 ) * 64;
 
-  for ( n = 0; n < 4; n++ )
+  for ( n = 0; n < wcslen(chinese_str); n++ )
   {
     /* set transformation */
     FT_Set_Transform( face, &matrix, &pen );
