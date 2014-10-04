@@ -8,3 +8,5 @@ gcc example1.c -L /opt/FriendlyARM/mini2440/1_prj/freetype/freetype-2.4.10/tmp/l
 用于交叉编译使用的freetype安装在目录/opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/下
 
 arm-linux-gcc -olcd_show show_font.c -L /opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/usr/local/lib/ -lfreetype -lm -I /opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/usr/local/include/ -finput-charset=GBK -fexec-charset=GBK
+
+arm-linux-gcc -olcd_show show_lines.c -L /opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/usr/local/lib/ -lfreetype -lm -I /opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/usr/local/include/ -finput-charset=GBK -fexec-charset=GBK
