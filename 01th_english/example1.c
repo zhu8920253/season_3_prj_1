@@ -82,6 +82,7 @@ main( int     argc,
   int           target_height;
   int           n, num_chars;
 
+  int chinese_str[] = {0x97e6, 0x4e1c, 0x5c71, 0x0067};
 
   if ( argc != 3 )
   {
@@ -114,19 +115,24 @@ main( int     argc,
 
   slot = face->glyph;
 
+  /* set up matrix */
+  matrix.xx = (FT_Fixed)( cos( angle ) * 0x10000L );
+  matrix.xy = (FT_Fixed)(-sin( angle ) * 0x10000L );
+  matrix.yx = (FT_Fixed)( sin( angle ) * 0x10000L );
+  matrix.yy = (FT_Fixed)( cos( angle ) * 0x10000L );
 
   /* the pen position in 26.6 cartesian space coordinates; */
   /* start at (0,40) relative to the upper left corner  */
   pen.x = 0 * 64;
   pen.y = ( target_height - 40 ) * 64;
 
-  for ( n = 0; n < num_chars; n++ )
+  for ( n = 0; n < 4; n++ )
   {
     /* set transformation */
-    FT_Set_Transform( face, NULL, &pen );
+    FT_Set_Transform( face, &matrix, &pen );
 
     /* load glyph image into the slot (erase previous one) */
-    error = FT_Load_Char( face, text[n], FT_LOAD_RENDER );
+    error = FT_Load_Char( face, chinese_str[n], FT_LOAD_RENDER );
     if ( error )
       continue;                 /* ignore errors */
 
