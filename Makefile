@@ -15,8 +15,8 @@ LDFLAGS := -lm -lfreetype
 CC 	:= $(CROSSCOMPILE)gcc
 LD 	:= $(CROSSCOMPILE)ld
 
-OBJS := example1.o
-TARGET :=example
+OBJS := show_font.o
+TARGET := show_font
 
 all: $(OBJS)
 	$(CC) $(FTLIB) $(LDFLAGS) -o $(TARGET) $^
