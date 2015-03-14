@@ -1,17 +1,28 @@
-#Freetype lib
-FT_LIB = /opt/FriendlyARM/mini2440/1_prj/freetype/freetype-2.4.10/tmp/lib/
+CROSSCOMPILE := arm-linux-
 
-#Freetype include
-FT_INC = /opt/FriendlyARM/mini2440/1_prj/freetype/freetype-2.4.10/tmp/include/freetype2/
+CFLAGS 	:= -Wall -O2 -c
+#3.4.1
+#FTLIB  	:= -L/opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/usr/local/lib
+#CFLAGS  += -I/opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/tmp/usr/local/include
 
-#charset
-INPUT_CHARSET = input-charset=GBK
-EXEC_CHARSET  = exec-charset=UTF-8
-CC = gcc
-FLAGS = -L $(FT_LIB) -lfreetype -lm -I $(FT_INC) -f$(INPUT_CHARSET) -f$(EXEC_CHARSET)
+#4.3.2
+FTLIB  	:= -L/opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/4_3_2_tmp/usr/local/lib
+CFLAGS  += -I/opt/FriendlyARM/mini2440/1_prj/freetype/ft_for_arm/4_3_2_tmp/usr/local/include
+CFLAGS  += -finput-charset=GBK
 
-all:
-	$(CC) example1.c $(FLAGS)
+LDFLAGS := -lm -lfreetype
+
+CC 	:= $(CROSSCOMPILE)gcc
+LD 	:= $(CROSSCOMPILE)ld
+
+OBJS := example1.o
+TARGET :=example
+
+all: $(OBJS)
+	$(CC) $(FTLIB) $(LDFLAGS) -o $(TARGET) $^
 
 clean:
-	rm -rf a.out
+	rm -f $(TARGET) $(OBJS)
+
+%.o:%.c
+	$(CC) $(CFLAGS) -o $@ $<
