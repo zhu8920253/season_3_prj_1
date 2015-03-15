@@ -13,6 +13,15 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 
+typedef struct TGlyph_ { 
+	FT_UInt index; /* glyph index */ 
+	FT_Vector pos; /* glyph origin on the baseline */ 
+	FT_Glyph image; /* glyph image */ 
+} TGlyph, *PGlyph; 
+
+
+#define MAX_GLYPHS  100
+
 int fd_fb;
 struct fb_var_screeninfo var;	/* Current var */
 struct fb_fix_screeninfo fix;	/* Current fix */
@@ -33,8 +42,6 @@ void lcd_put_pixel(int x, int y, unsigned int color)
 
 	pen_16 = (unsigned short *)pen_8;
 	pen_32 = (unsigned int *)pen_8;
-	
-	color |= 0x555500;
 
 	switch (var.bits_per_pixel)
 	{
@@ -96,6 +103,97 @@ draw_bitmap( FT_Bitmap*  bitmap,
 }
 
 
+int Get_Glyphs_Frm_Wstr(FT_Face face, wchar_t * wstr, TGlyph glyphs[])
+{
+	int n;
+	PGlyph glyph = glyphs;
+	int pen_x = 0;
+	int pen_y = 0;
+	int error;
+	FT_GlyphSlot  slot = face->glyph;;
+	
+		
+	for (n = 0; n < wcslen(wstr); n++)
+	{
+		glyph->index = FT_Get_Char_Index( face, wstr[n]); 
+		/* store current pen position */ 
+		glyph->pos.x = pen_x; 
+		glyph->pos.y = pen_y;		
+
+		/* load时是把glyph放入插槽face->glyph */
+		error = FT_Load_Glyph(face, glyph->index, FT_LOAD_DEFAULT);
+		if ( error ) 
+			continue;
+
+		error = FT_Get_Glyph(face->glyph, &glyph->image ); 
+		if ( error ) 
+			continue;
+
+		/* translate the glyph image now */ 
+		/* 这使得glyph->image里含有位置信息 */
+		FT_Glyph_Transform(glyph->image, 0, &glyph->pos );
+
+		pen_x += slot->advance.x;  /* 1/64 point */
+
+		/* increment number of glyphs */ 
+		glyph++;		
+	}
+
+	/* count number of glyphs loaded */ 
+	return (glyph - glyphs);
+}
+
+void compute_string_bbox(TGlyph glyphs[], FT_UInt num_glyphs, FT_BBox *abbox )
+{
+	FT_BBox bbox; 
+	int n;
+	
+	bbox.xMin = bbox.yMin = 32000; 
+	bbox.xMax = bbox.yMax = -32000;
+
+	for ( n = 0; n < num_glyphs; n++ )
+	{
+		FT_BBox glyph_bbox;
+		
+		FT_Glyph_Get_CBox(glyphs[n].image, FT_GLYPH_BBOX_TRUNCATE, &glyph_bbox );
+
+		if (glyph_bbox.xMin < bbox.xMin)
+			bbox.xMin = glyph_bbox.xMin;
+
+		if (glyph_bbox.yMin < bbox.yMin)
+			bbox.yMin = glyph_bbox.yMin;
+
+		if (glyph_bbox.xMax > bbox.xMax)
+			bbox.xMax = glyph_bbox.xMax;
+
+		if (glyph_bbox.yMax > bbox.yMax)
+			bbox.yMax = glyph_bbox.yMax;
+	}
+
+	*abbox = bbox;
+}
+
+
+void Draw_Glyphs(TGlyph glyphs[], FT_UInt num_glyphs, FT_Vector pen)
+{
+	int n;
+	int error;
+	
+	for (n = 0; n < num_glyphs; n++)
+	{
+		FT_Glyph_Transform(glyphs[n].image, 0, &pen);
+		/* convert glyph image to bitmap (destroy the glyph copy!) */ 
+		error = FT_Glyph_To_Bitmap(&glyphs[n].image, FT_RENDER_MODE_NORMAL, 0, /* no additional translation */ 
+                              		1 ); 		/* destroy copy in "image" */
+		if ( !error ) 
+		{ 
+			FT_BitmapGlyph bit = (FT_BitmapGlyph)glyphs[n].image; 
+			draw_bitmap(&bit->bitmap, bit->left, var.yres - bit->top); 
+			FT_Done_Glyph(glyphs[n].image ); 
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
 	wchar_t *wstr1 = L"百问网gif";
@@ -108,10 +206,16 @@ int main(int argc, char **argv)
 	FT_GlyphSlot  slot;
 	int i;
 	FT_BBox bbox;
-	FT_Glyph  glyph;
 
 	int line_box_ymin = 10000;
 	int line_box_ymax = 0;
+
+	int line_box_width;
+	int line_box_height;
+
+	TGlyph glyphs[MAX_GLYPHS]; /* glyphs table */ 
+	FT_UInt num_glyphs;
+
 
 	if (argc != 2)
 	{
@@ -162,100 +266,30 @@ int main(int argc, char **argv)
 
 	FT_Set_Pixel_Sizes(face, 24, 0);
 
-	/* 确定座标:
-	 * lcd_x = 0
-	 * lcd_y = 24
-	 * 笛卡尔座标系:
-	 * x = lcd_x = 0
-	 * y = var.yres - lcd_y = var.yres - 24
-	 */
-	pen.x = 0 * 64;
-	pen.y = (var.yres - 24) * 64;
-
-	for (i = 0; i < wcslen(wstr1); i++)
-	{
-	    /* set transformation */
-	    FT_Set_Transform( face, 0, &pen);
-
-	    /* load glyph image into the slot (erase previous one) */
-	    error = FT_Load_Char( face, wstr1[i], FT_LOAD_RENDER );
-		if (error)
-		{
-			printf("FT_Load_Char error\n");
-			return -1;
-		}
-
-		error = FT_Get_Glyph( face->glyph, &glyph );
-		if (error)
-		{
-			printf("FT_Get_Glyph error!\n");
-			return -1;
-		}
-		
-		FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_TRUNCATE, &bbox );
-		if (line_box_ymin > bbox.yMin)
-			line_box_ymin = bbox.yMin;
-		if (line_box_ymax < bbox.yMax)
-			line_box_ymax = bbox.yMax;
-		
-	    draw_bitmap( &slot->bitmap,
-	                 slot->bitmap_left,
-	                 var.yres - slot->bitmap_top);
-
-		/* increment pen position */
-		pen.x += slot->advance.x;
-		//pen.y += slot->advance.y;
-
-	}
-
-
-	/* 确定座标:
-	 * lcd_x = 0
-	 * lcd_y = line_box_ymax - line_box_ymin + 24
-	 * 笛卡尔座标系:
-	 * x = lcd_x = 0
-	 * y = var.yres - lcd_y = var.yres - (line_box_ymax - line_box_ymin + 24)
-	 */
-	pen.x = 0 * 64;
-	pen.y = (var.yres - (line_box_ymax - line_box_ymin + 24)) * 64;
-
-	for (i = 0; i < wcslen(wstr2); i++)
-	{
-	    /* set transformation */
-	    FT_Set_Transform( face, 0, &pen);
-
-	    /* load glyph image into the slot (erase previous one) */
-	    error = FT_Load_Char( face, wstr2[i], FT_LOAD_RENDER );
-		if (error)
-		{
-			printf("FT_Load_Char error\n");
-			return -1;
-		}
-
-		error = FT_Get_Glyph( face->glyph, &glyph );
-		if (error)
-		{
-			printf("FT_Get_Glyph error!\n");
-			return -1;
-		}
-		
-		FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_TRUNCATE, &bbox );
-		if (line_box_ymin > bbox.yMin)
-			line_box_ymin = bbox.yMin;
-		if (line_box_ymax < bbox.yMax)
-			line_box_ymax = bbox.yMax;
-		
-	    draw_bitmap( &slot->bitmap,
-	                 slot->bitmap_left,
-	                 var.yres - slot->bitmap_top);
-
-		/* increment pen position */
-		pen.x += slot->advance.x;
-		//pen.y += slot->advance.y;
-
-	}
-
+	/* wstr1 */
+	num_glyphs = Get_Glyphs_Frm_Wstr(face, wstr1, glyphs);
 	
+	compute_string_bbox(glyphs, num_glyphs, &bbox);
+	line_box_width  = bbox.xMax - bbox.xMin;
+	line_box_height = bbox.yMax - bbox.yMin;
+
+	pen.x = (var.xres - line_box_width)/2 * 64;
+	pen.y = (var.yres - line_box_height)/2 * 64;
+
+	Draw_Glyphs(glyphs, num_glyphs, pen);
+
+	/* wstr2 */
+	num_glyphs = Get_Glyphs_Frm_Wstr(face, wstr2, glyphs);
+
+	compute_string_bbox(glyphs, num_glyphs, &bbox);
+	line_box_width  = bbox.xMax - bbox.xMin;
+	line_box_height = bbox.yMax - bbox.yMin;
+
+	pen.x = (var.xres - line_box_width)/2 * 64;
+	pen.y = pen.y - 24 * 64;
+	Draw_Glyphs(glyphs, num_glyphs, pen);
+
+
 	return 0;	
 }
 
