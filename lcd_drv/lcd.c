@@ -105,12 +105,10 @@ static int lcd_init(void)
 	/* 2.1 设置固定的参数 */
 	strcpy(s3c_lcd->fix.id, "mylcd");
 	/* MINI2440的LCD位宽是24,但是2440里会分配4字节即32位(浪费1字节) */
-//	s3c_lcd->fix.smem_len = 320*240*16/8;        
-	s3c_lcd->fix.smem_len = 320*240*32/8;        
+	s3c_lcd->fix.smem_len = 320*240*16/8;        
 	s3c_lcd->fix.type     = FB_TYPE_PACKED_PIXELS;
 	s3c_lcd->fix.visual   = FB_VISUAL_TRUECOLOR; /* TFT */
-	s3c_lcd->fix.line_length = 240*32/8;
-//	s3c_lcd->fix.line_length = 240*16/8;
+	s3c_lcd->fix.line_length = 240*16/8;
 	
 	/* 2.2 设置可变的参数 */
 	s3c_lcd->var.xres           = 240;
@@ -119,7 +117,6 @@ static int lcd_init(void)
 	s3c_lcd->var.yres_virtual   = 320;
 	s3c_lcd->var.bits_per_pixel = 16;
 
-#if 0
 	/* RGB:565 */
 	s3c_lcd->var.red.offset     = 11;
 	s3c_lcd->var.red.length     = 5;
@@ -129,19 +126,8 @@ static int lcd_init(void)
 
 	s3c_lcd->var.blue.offset    = 0;
 	s3c_lcd->var.blue.length    = 5;
-#else 
-	s3c_lcd->var.red.offset     = 16;
-	s3c_lcd->var.red.length     = 8;
-	
-	s3c_lcd->var.green.offset   = 8;
-	s3c_lcd->var.green.length   = 8;
-
-	s3c_lcd->var.blue.offset    = 0;
-	s3c_lcd->var.blue.length    = 8;
-#endif
 
 	s3c_lcd->var.activate       = FB_ACTIVATE_NOW;
-	
 	
 	/* 2.3 设置操作函数 */
 	s3c_lcd->fbops              = &s3c_lcdfb_ops;
@@ -149,7 +135,8 @@ static int lcd_init(void)
 	/* 2.4 其他的设置 */
 	s3c_lcd->pseudo_palette = pseudo_palette; 
 	//s3c_lcd->screen_base  = ;  /* 显存的虚拟地址 */ 
-	s3c_lcd->screen_size   = 320*240*32/8;
+	s3c_lcd->screen_size   = 0;//这个值设置成0也可以 
+//	s3c_lcd->screen_size   = 320*240*32/8;
 
 	/* 3. 硬件相关的操作 */
 	/* 3.1 配置GPIO用于LCD */
@@ -174,8 +161,7 @@ static int lcd_init(void)
 	 * bit[4:1]: 1100, 16 bpp for TFT
 	 * bit[0]  : 0 = Disable the video output and the LCD control signal.
 	 */
-//	lcd_regs->lcdcon1  = (8<<8) | (3<<5) | (0x0d<<1);/* 8 bpp for TFT */
-	lcd_regs->lcdcon1  = (8<<8) | (3<<5) | (0x0c<<1);/* 16 bpp for TFT */
+	lcd_regs->lcdcon1  = (8<<8) | (3<<5) | (0x0c<<1);//CLKVAL = 8
 
 	/* 垂直方向的时间参数
 	 * 根据数据手册
@@ -187,12 +173,6 @@ static int lcd_init(void)
 	 *             LCD手册tvf=4, 所以VFPD=4-1=3
 	 * bit[5:0]  : VSPW, VSYNC信号的脉冲宽度, LCD手册tvp=1, 所以VSPW=1-1=0
 	 */
-	 
-    /* 使用这些数值, 图像有下移的现象, 应该是数据手册过时了
-	 * 自己微调一下, 上下移动调VBPD和VFPD
-	 * 保持(VBPD+VFPD)不变, 减小VBPD图像上移, 取VBPD=11, VFPD=9
-	 * 多试几次, 我试了10多次
-	 */
 	lcd_regs->lcdcon2  = (0<<24) | (319<<14) | (4<<6) | (9<<0);
 
 	/* 水平方向的时间参数
@@ -202,12 +182,6 @@ static int lcd_init(void)
 	 * bit[18:8]: 多少行, 240, 所以HOZVAL=240-1=239
 	 * bit[7:0] : HFPD, 发出最后一行里最后一个象素数据之后，再过多长时间才发出HSYNC
 	 *             LCD手册thf>=2, th=408=thp+thb+320+thf, thf=49, HFPD=49-1=48
-	 */
-
-    /* 使用这些数值, 图像有左移的现象, 应该是数据手册过时了
-	 * 自己微调一下, 左右移动调HBPD和HFPD
-	 * 保持(HBPD+HFPD)不变, 增加HBPD图像右移, 取HBPD=69, HFPD=16
-	 * 多试几次, 我试了10多次
 	 */
 	lcd_regs->lcdcon3 = (25<<19) | (239<<8) | (0<<0);
 
@@ -229,8 +203,7 @@ static int lcd_init(void)
 	 * bit[1] : 0 = BSWP
 	 * bit[0] : 1 = HWSWP  Swap Enable
 	 */
-	lcd_regs->lcdcon5 = ((0<<11) | (1<<10) | (1<<9) | (1<<8) | (1<<6) | (1<<0));
-//	lcd_regs->lcdcon5 = ((1<<11) | (1<<10) | (1<<9) | (1<<8) | (1<<6) | (1<<0));
+	lcd_regs->lcdcon5 = ((1<<11) | (1<<10) | (1<<9) | (1<<8) | (1<<6) | (1<<0));
 	
 	/* 3.3 分配显存(framebuffer), 并把地址告诉LCD控制器 */
 	s3c_lcd->screen_base = dma_alloc_writecombine(NULL, s3c_lcd->fix.smem_len, &s3c_lcd->fix.smem_start, GFP_KERNEL);
