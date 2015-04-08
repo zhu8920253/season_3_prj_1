@@ -47,6 +47,8 @@ static T_PageLayout g_tBrowsePageMenuIconsLayout = {
 static char *g_strDirClosedIconName  = "fold_closed.bmp";
 static char *g_strDirOpenedIconName  = "fold_opened.bmp";
 static char *g_strFileIconName = "file.bmp";
+static char *g_strFileTxtIconName = "text.bmp";
+static char *g_strFileJpgIconName = "jpg.bmp";
 static T_Layout *g_atDirAndFileLayout;
 static T_PageLayout g_tBrowsePageDirAndFileLayout = {
 	.iMaxTotalBytes = 0,
@@ -67,6 +69,8 @@ static char g_strSelectedDir[256] = DEFAULT_DIR;
 static T_PixelDatas g_tDirClosedIconPixelDatas;
 static T_PixelDatas g_tDirOpenedIconPixelDatas;
 static T_PixelDatas g_tFileIconPixelDatas;
+static T_PixelDatas g_tFileTxtIconPixelDatas;
+static T_PixelDatas g_tFileJpgIconPixelDatas;
 
 
 /**********************************************************************
@@ -469,6 +473,14 @@ static int GenerateBrowsePageDirAndFile(int iStartIndex, int iDirContentsNumber,
                 {
                     PicMerge(atLayout[k].iTopLeftX, atLayout[k].iTopLeftY, &g_tDirClosedIconPixelDatas, &ptVideoMem->tPixelDatas);
                 }
+				else if (aptDirContents[iDirContentIndex]->eFileType == FILETYPE_FILE_TXT)
+				{
+                    PicMerge(atLayout[k].iTopLeftX, atLayout[k].iTopLeftY, &g_tFileTxtIconPixelDatas, &ptVideoMem->tPixelDatas);
+				}
+				else if (aptDirContents[iDirContentIndex]->eFileType == FILETYPE_FILE_JPG)
+				{
+                    PicMerge(atLayout[k].iTopLeftX, atLayout[k].iTopLeftY, &g_tFileJpgIconPixelDatas, &ptVideoMem->tPixelDatas);
+				}
                 else
                 {
                     PicMerge(atLayout[k].iTopLeftX, atLayout[k].iTopLeftY, &g_tFileIconPixelDatas, &ptVideoMem->tPixelDatas);
@@ -539,6 +551,22 @@ static int GenerateDirAndFileIcons(PT_PageLayout ptPageLayout)
         return -1;
     }
 
+	/* alloc mem for txt bmp */
+    g_tFileTxtIconPixelDatas.iBpp          = iBpp;
+    g_tFileTxtIconPixelDatas.aucPixelDatas = malloc(ptPageLayout->iMaxTotalBytes);
+    if (g_tFileTxtIconPixelDatas.aucPixelDatas == NULL)
+    {
+        return -1;
+    }
+
+	/* alloc mem for jpg bmp */
+    g_tFileJpgIconPixelDatas.iBpp          = iBpp;
+    g_tFileJpgIconPixelDatas.aucPixelDatas = malloc(ptPageLayout->iMaxTotalBytes);
+    if (g_tFileJpgIconPixelDatas.aucPixelDatas == NULL)
+    {
+        return -1;
+    }
+
     /* 从BMP文件里提取图像数据 */
     /* 1. 提取"fold_closed图标" */
     iError = GetPixelDatasForIcon(g_strDirClosedIconName, &tOriginIconPixelDatas);
@@ -582,6 +610,33 @@ static int GenerateDirAndFileIcons(PT_PageLayout ptPageLayout)
     PicZoom(&tOriginIconPixelDatas, &g_tFileIconPixelDatas);
     FreePixelDatasForIcon(&tOriginIconPixelDatas);
 
+    /* 4. 提取"txt图标" */
+    iError = GetPixelDatasForIcon(g_strFileTxtIconName, &tOriginIconPixelDatas);
+    if (iError)
+    {
+        DBG_PRINTF("GetPixelDatasForIcon %s error!\n", g_strFileTxtIconName);
+        return -1;
+    }
+    g_tFileTxtIconPixelDatas.iHeight = atLayout[0].iBotRightY - atLayout[0].iTopLeftY + 1;
+    g_tFileTxtIconPixelDatas.iWidth  = atLayout[0].iBotRightX - atLayout[0].iTopLeftX+ 1;
+    g_tFileTxtIconPixelDatas.iLineBytes  = g_tDirClosedIconPixelDatas.iWidth * g_tDirClosedIconPixelDatas.iBpp / 8;
+    g_tFileTxtIconPixelDatas.iTotalBytes = g_tFileTxtIconPixelDatas.iLineBytes * g_tFileTxtIconPixelDatas.iHeight;
+    PicZoom(&tOriginIconPixelDatas, &g_tFileTxtIconPixelDatas);
+    FreePixelDatasForIcon(&tOriginIconPixelDatas);
+
+    /* 5. 提取"jpg图标" */
+    iError = GetPixelDatasForIcon(g_strFileJpgIconName, &tOriginIconPixelDatas);
+    if (iError)
+    {
+        DBG_PRINTF("GetPixelDatasForIcon %s error!\n", g_strFileJpgIconName);
+        return -1;
+    }
+    g_tFileJpgIconPixelDatas.iHeight = atLayout[0].iBotRightY - atLayout[0].iTopLeftY + 1;
+    g_tFileJpgIconPixelDatas.iWidth  = atLayout[0].iBotRightX - atLayout[0].iTopLeftX+ 1;
+    g_tFileJpgIconPixelDatas.iLineBytes  = g_tDirClosedIconPixelDatas.iWidth * g_tDirClosedIconPixelDatas.iBpp / 8;
+    g_tFileJpgIconPixelDatas.iTotalBytes = g_tFileJpgIconPixelDatas.iLineBytes * g_tFileTxtIconPixelDatas.iHeight;
+    PicZoom(&tOriginIconPixelDatas, &g_tFileJpgIconPixelDatas);
+    FreePixelDatasForIcon(&tOriginIconPixelDatas);
     return 0;
 }
 

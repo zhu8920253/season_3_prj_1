@@ -14,8 +14,14 @@ typedef struct FileMap {
 
 /* 文件类别 */
 typedef enum {
-	FILETYPE_DIR = 0,  /* 目录 */
-	FILETYPE_FILE,     /* 文件 */
+	FILETYPE_DIR = 0,  		/* 目录 */
+	FILETYPE_FILE,     		/* 文件 */
+	FILETYPE_FILE_TXT,     	/* TXT文件 */
+	FILETYPE_FILE_EXC,     	/* EXE文件 */
+	FILETYPE_FILE_RC,     	/* RC文件 */
+	FILETYPE_FILE_SH,     	/* SHELL文件 */
+	FILETYPE_FILE_C,     	/* C文件 */
+	FILETYPE_FILE_JPG,     	/* JPEG文件 */
 }E_FileType;
 
 /* 目录里的内容 */

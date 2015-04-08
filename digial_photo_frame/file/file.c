@@ -182,6 +182,8 @@ int GetDirContents(char *strDirName, PT_DirContent **pptDirContents, int *piNumb
 	int iNumber;
 	int i;
 	int j;
+	char *last3char;
+	int namelen;
 
 	/* 扫描目录,结果按名字排序,存在aptNameList[0],aptNameList[1],... */
 	iNumber = scandir(strDirName, &aptNameList, 0, alphasort);
@@ -242,9 +244,23 @@ int GetDirContents(char *strDirName, PT_DirContent **pptDirContents, int *piNumb
 		/* if (aptNameList[i]->d_type == DT_REG) */
         if (isRegFile(strDirName, aptNameList[i]->d_name))
 		{
+			namelen = strlen(aptNameList[i]->d_name);
+			last3char = aptNameList[i]->d_name + namelen - 4;
+			printf("name = %s, len = %d\n", aptNameList[i]->d_name, namelen);
+			printf("last3 = %s\n", last3char);
 			strncpy(aptDirContents[j]->strName, aptNameList[i]->d_name, 256);
 			aptDirContents[j]->strName[255] = '\0';
 			aptDirContents[j]->eFileType    = FILETYPE_FILE;
+			if (strcmp(last3char, ".txt") == 0)
+			{
+				printf("this is txt file name = %s\n", aptNameList[i]->d_name);
+				aptDirContents[j]->eFileType    = FILETYPE_FILE_TXT;
+			}
+			if (strcmp(last3char, ".jpg") == 0)
+			{
+				printf("this is jpg file name = %s\n", aptNameList[i]->d_name);
+				aptDirContents[j]->eFileType    = FILETYPE_FILE_JPG;
+			}
             free(aptNameList[i]);
             aptNameList[i] = NULL;
 			j++;
